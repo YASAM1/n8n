@@ -1,19 +1,39 @@
 <script lang="ts">
-import sanitizeHtml, { defaults, type IOptions as SanitizeOptions } from 'sanitize-html';
+import xss, { safeAttrValue, whiteList, type IWhiteList } from 'xss';
 
-const sanitizeOptions: SanitizeOptions = {
-	allowVulnerableTags: false,
-	enforceHtmlBoundary: false,
-	disallowedTagsMode: 'discard',
-	allowedTags: [...defaults.allowedTags, 'style', 'img', 'title'],
-	allowedAttributes: {
-		...defaults.allowedAttributes,
-		'*': ['class', 'style'],
-	},
-	transformTags: {
-		head: '',
-	},
+const sanitizeWhiteList: IWhiteList = {
+	...whiteList,
+	style: [],
+	img: [...(whiteList.img ?? []), 'src'],
+	title: [],
 };
+
+const serializeAttr = (tag: string, name: string, value: string) => {
+	const safe = safeAttrValue(tag, name, value, {
+		process: (input) => input,
+	});
+
+	return safe ? `${name}="${safe}"` : '';
+};
+
+const sanitizeHtml = (inputHtml: string) =>
+	xss(inputHtml, {
+		whiteList: sanitizeWhiteList,
+		onIgnoreTag(tag) {
+			if (tag === 'head') {
+				return '';
+			}
+
+			return;
+		},
+		onIgnoreTagAttr(tag, name, value) {
+			if (name === 'class' || name === 'style') {
+				return serializeAttr(tag, name, value);
+			}
+
+			return;
+		},
+	});
 
 export default {
 	name: 'RunDataHtml',
@@ -25,7 +45,7 @@ export default {
 	},
 	computed: {
 		sanitizedHtml() {
-			return sanitizeHtml(this.inputHtml, sanitizeOptions);
+			return sanitizeHtml(this.inputHtml);
 		},
 	},
 };

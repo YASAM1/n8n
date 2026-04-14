@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import sanitize from 'sanitize-html';
+import xss from 'xss';
 import { computed, ref, useCssModule } from 'vue';
 
 import N8nText from '../../components/N8nText';
@@ -32,8 +32,8 @@ const canTruncate = computed(() => props.fullContent !== undefined);
 
 const showFullContent = ref(false);
 const displayContent = computed(() =>
-	sanitize(showFullContent.value ? props.fullContent : props.content, {
-		allowedAttributes: {
+	xss(showFullContent.value ? props.fullContent : props.content, {
+		whiteList: {
 			a: [
 				'data-key',
 				'href',
@@ -42,8 +42,9 @@ const displayContent = computed(() =>
 				'data-action-parameter-connectiontype',
 				'data-action-parameter-creatorview',
 			],
+			ul: [],
+			li: [],
 		},
-		allowedTags: ['a', 'ul', 'li'],
 	}),
 );
 

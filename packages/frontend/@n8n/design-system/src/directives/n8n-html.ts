@@ -1,4 +1,4 @@
-import sanitize from 'sanitize-html';
+import xss, { escapeAttrValue, whiteList, type IWhiteList } from 'xss';
 import type { DirectiveBinding, FunctionDirective } from 'vue';
 
 /**
@@ -16,15 +16,23 @@ import type { DirectiveBinding, FunctionDirective } from 'vue';
  * https://vuejs.org/guide/reusability/custom-directives#usage-on-components
  */
 
+const configuredWhiteList: IWhiteList = {
+	...whiteList,
+	img: [...(whiteList.img ?? []), 'src'],
+	input: ['type', 'id', 'checked'],
+	code: ['class'],
+	div: ['class'],
+};
+
 const configuredSanitize = (html: string) =>
-	sanitize(html, {
-		allowedTags: sanitize.defaults.allowedTags.concat(['img', 'input']),
-		allowedAttributes: {
-			...sanitize.defaults.allowedAttributes,
-			input: ['type', 'id', 'checked'],
-			code: ['class'],
-			a: sanitize.defaults.allowedAttributes.a.concat(['data-*']),
-			div: ['class'],
+	xss(html, {
+		whiteList: configuredWhiteList,
+		onIgnoreTagAttr(tag, name, value) {
+			if (tag === 'a' && name.startsWith('data-')) {
+				return `${name}="${escapeAttrValue(value)}"`;
+			}
+
+			return;
 		},
 	});
 
